@@ -1,0 +1,220 @@
+kolla commit-signatur på heads/master på github , där ifrån kolla om vi kan följa till tree, och sha på .jenkins.yaml
+-> Nope. Ref -> commit -> kolla sig på commit kan vi och få ut tree, men vi kan inte få raw tree, men det går att bygga ett raw tree från vad github tillhandahåller =)
+-> Rewrite av ../get-and-verify-jenkins-yaml.sh i groovy och jgit?
+ -> https://bugs.eclipse.org/bugs/show_bug.cgi?id=382212
+ ->
+
+Skriva en jenkins-plugin som git-extension som validerar gpg-signaturer?
+
+pipeline branch mojt. checka ut master, och om .jenkins.yaml innehåller annan branch, configa om git, skedulera ny build av dig själv och NOT_BUILT exit.
+eller annan git config som inte stämmer.
+
+Sen:
+
+Se om pipeline blir bättre med https://go.cloudbees.com/docs/plugins/docker-workflow/ istället for dockerNode()
+
+Bryt ut ITEM_ROOTDIR till en separat slask-path
+JAVA_OPTS='-Djenkins.model.Jenkins.buildsDir=/var/jenkins_builds/${ITEM_FULL_NAME}'
+
+Failing jobs and diag:
+cnaas-nms : no db-config
+docker-eduix-base-daily : debian stable updated
+docker-eduix-base : debian stable updated
+docker-filesender : updated composer installer
+docker-ola-nrpe : bad config
+docker-pages-api : gitpython upgraded?
+docker-peer : github.com/Yaco-Sistemas/peer gone
+docker-redirect : updated ubuntu
+docker-sentry : pytest setuptools>=40.0
+docker-shibsp : debian stable updated, shib2 -> shib
+docker-sp-crowd-daily : debian stable updated, shib2 -> shib
+docker-sp-crowd : debian stable updated, shib2 -> shib
+docker-stud : updated ubuntu
+docker-swamid-signer : python dependency
+docker-thiss-js : depenency thiss-js
+docker-tpm2 : debian sid updated
+docker-tumstock: dependency tumstock
+eduid-api : Modern CherryPy
+eduid-graphite-docker : debian testing updated
+graphite : debian testing updated
+lobber-storagenode : twisted not found
+lobo2 : Modern flask
+memcached : debian stable updated
+mongodb_beaker : pymongo upgraded
+percona : updated ubuntu
+pymmclient : test env missing? notarealhost.skatteverket.se
+python-suds : no branch ssl-enabled
+python-pyhsm : no hsm
+simone-example : builder problem? maven detection missing?
+simple-registrator : package renamed?
+svs : pysaml2==4.2.0 missing
+thiss-jquery-plugin : synk account?
+thiss-js : webpack not in path / Failed to load ./.env
+tumstock : bad config
+ucrandomd : updated ubuntu
+varnish-auto : moved packages
+VCCS : Modern CherryPy
+
+
+=== Långt senare ===
+https://bugs.eclipse.org/bugs/show_bug.cgi?id=382212
+bygga jgit i jenkins för att validera gpg-signaturer i git.
+
+=== DONE ===
+libnss-docker -> container -> jenkins -> https://jenkins.docker/
+ -> Nog inte värt ett
+
+rensa jenkins_home och flytta till jcasc
+ -> jenkins.telemetry.Correlator.xml -> nope
+ -> scriptApproval.xml -> unknown.
+ -> jenkins.plugins.publish_over_ssh.BapSshPublisherPlugin.xml -> fixed
+ -> env PIP_DOWNLOAD_CACHE=/var/cache/jenkins/pip
+    - Borde den vara en shared volume mellan agent-containers?
+
+jenkins_home på en separat volume.
+
+När lts'en uppdateras:
+https://wiki.jenkins.io/display/JENKINS/Slave+To+Master+Access+Control
+
+SLACK_TOKEN -> credentials.
+
+Sätt locale force en_US via groovy
+
+Bli av med master builds genom att göra sig av med file SCM och kör en
+separat container med en gitd på 9418 som bootstrap-docker-builds kan clone'as ifrån.
+Iofs kräver det commit, och det gör inte file SCM...
+-> fördelen är att jenkins inte får tag i halvfärdiga grejer...
+
+Hacka bort docker push genom alias, command eller whatever, för "DEV"
+På så sätt failar inte jobb "i onödan"
+
+Selected Git installation does not exist. Using Default
+? https://172.16.12.100/job/telegraf/1/console
+
+* docker_build_prep.sh bug https://jenkins.jenkins.docker/job/eduid-html/lastFailedBuild/console https://jenkins.jenkins.docker/job/eduid-lookup-mobile-docker/lastFailedBuild/console https://jenkins.jenkins.docker/job/eduid-webapp-docker/lastFailedBuild/console https://jenkins.jenkins.docker/job/haproxy-status-docker/lastFailedBuild/console https://jenkins.jenkins.docker/job/se-leg-ra-docker/lastFailedBuild/console https://jenkins.jenkins.docker/job/se-leg-rp-docker/lastFailedBuild/console https://jenkins.jenkins.docker/job/sunet-frontend-api-docker/lastFailedBuild/console
+* docker_tag.sh bug
+* etcd probem https://jenkins.jenkins.docker/job/eduid-common/lastFailedBuild/consoleFull
+* missing package libpcsclite-dev ? https://jenkins.jenkins.docker/job/pycardshare/lastFailedBuild/console
+
+Job containers som startar containers och pratar nät med dom failar.
+Detta pga att networkingen hamnar i host-namespacet, inte i container-namespacet.
+Samma problem som med mounts som gör att docker-custom-build-environment-plugin inte fungerar så bra.
+Ex. https://jenkins.jenkins.docker/job/eduid_msg
+Hur kan man lösa detta på nått begriplig sätt? Det enda jag ser är att skriva om koden till att acceptera
+att det finns en $tjänst på $port om $TJÄNST_PORT är satt, och låta den använda den.
+Alt, att sluta köra agents i containers, och köra dom i VM's instället.
+
+-> Idé: kör default-containern i --network=host så blir portmapping rätt. Det som fallerar är att den inte har tillgång till git-bootstrap, men det kan jag lösa annars.
+
+Run-in-container-jobben förutsätter att dom är root, och blindly kör ex. apt-get install.
+
+Titta på att byta ut inmappningen av host-docker-binary mot en wrapper
+som kör docker i docker-container docker(library/docker) precis som
+docker-compose wrappern.
+
+Mongo-stuffet städar inte alltid efter sig, utan kan drälla containers kvar:
+c799aeac25ff        docker.sunet.se/eduid/mongodb:latest       "bash /start.sh"         2 hours ago         Up 2 hours          28017/tcp, 0.0.0.0:47252->27017/tcp   youthful_elion
+c27c2584fa40        docker.sunet.se/eduid/mongodb:latest       "bash /start.sh"         2 hours ago         Up 2 hours          28017/tcp, 0.0.0.0:41921->27017/tcp   musing_yonath
+11cef6264218        docker.sunet.se/eduid/mongodb:latest       "bash /start.sh"         5 hours ago         Up 5 hours          28017/tcp, 0.0.0.0:44698->27017/tcp   lucid_chatterjee
+
+run-in-docker fungerar inte om master är en docker.
+Den fungerar bara om agent är en bare-metal/vm och agentens pathar överenstämmer med hosten.
+Den behöver mappa in via bind-mounts jenkins-home och /tmp för att fungera.
+
+Detta går att lösa genom att göra om dom till ett riktigt cloud-jobb.
+
+Flytta alla jobb bort från master och in i containers -> skydda master.
+Inte job som startar containers, utan jenkins startar container, och sen startar jobb i container. -> kube compatible
+
+Bra vore också att jobba bort docker-i-docker grejer för alla agents.
+För att bygga docker images i en container, så som jenkins-job utan docker-daemon:
+https://github.com/genuinetools/img
+https://github.com/GoogleContainerTools/kaniko
+
+docker_tag.sh bug på ex:
+https://jenkins.jenkins.docker/job/cnaas-radius/lastFailedBuild/console
+https://jenkins.jenkins.docker/job/docker-mdq-browser/lastFailedBuild/console
+
+docker_build_prep.sh bugg
+
+docker-custom-build-environment har fungerat då /var/jenkins_home har varit en symlänk till "riktiga" jenkins-home,
+och JAVA_OPTS=-Djava.io.tmpdir=/var/jenkins_home/tmp gjort att tmp hamnat där.
+Det gör att volume-mappningarna som docker-build-publish-plugin blint förutsätter har fortsatt att fungera.
+
+Återintroducera det här, så det blir doccat innan vi går över till docker-plugin all the way.
+
+
+# Jobs fixed
+cnaas-nac: Missing dependency yaml
+docker-geodns : dropped go version
+eduid-common : etcd test flankyness
+docker-goofys : go version?
+jose : pip freeze git rev-parse
+python-proquint : pip freeze git rev-parse
+stathat-async : pip freeze git rev-parse
+stathat.py : pip freeze git rev-parse
+pycardshare : python nosetests update
+pyriksbankapi : python nosetests update
+pyscard : python nosetests update
+wsgi_ratelimit : python nosetests update
+
+Copy views from PROD into job-dsl
+
+titta på github oauth plugin , och "GitHub Committer Authorization Strategy" för att sätta upp rätt grejer för prod.
+
+docker-build-publish-plugin stödjer inte pipeline, så den ersätts med docker-plugin för att bli pipeline-compatible.
+
+Separera jcasc "PROD" config från "DEV"
+- Om vi vill kunna köra PROD och DEV jenkins från samma repo. -> Info behövs om prod
+- Luska ut cert
+- Luska ut properties
+- git-mojt eller inte?
+PROD: docker-config
+PROD: pypi ssh key?
+
+Skriva om job-dsl-job-blobban till Pipeline, så job-dsl genererar pipeline-job, och där
+pipelinejobben läser .jenkins.yaml och gör efter den.
+
+io.netty.channel.AbstractChannel$AnnotatedConnectException: connect(..) failed: Permission denied: /var/run/docker.sock
+Ubuntu default är 660 root:docker (0:132-dynamic), och jenkins är jenkins:jenkins (1000:1000)
+ -> chmod 666 /var/run/docker.sock
+ -> dockerd -G 1000 , alt daemon.json { "group": "1000" }
+ -> alt /etc/systemd/system/docker.socket.d/override.conf SocketMode=0665 alt SocketUser=1000
+
+Job inte i job-dsl , igen aktuell, eller använd
+* araneus_rngd
+* bootstrap-docker-builds
+* buildstep-config-files.xml
+* cnaas-pipeline
+* lobber
+* lobber-client
+* lobber-deluge-core
+* meetingtools
+
+github webooks config.
+-> token
+
+git config
+user.name jenkins
+user.email dev@sunet.se
+
+github webooks config.
+-> shared secret?
+-> bygga pr's? den är configad iallafall.
+ - > Näe, vi skiter i den så länge.
+
+Docker push credentials?
+-> Configas antingen i dockerd
+-> dockerBuilderPublisher -> pushCredentialsId <- funka inte
+
+Städa upp nameing vad det gäller docker images.
+docker-jenkins-job grunkorna är ett träsk
+docker-jenkins är ett träsk
+docker.sunet.se/sunet/docker-jenkins:stable vs. docker.sunet.se/jenkins vs. docker.sunet.se/docker-jenkins
+
+vi har harmoniserat :slightly_smiling_face:
+Leif tyckte att tagga saker som docker.sunet.se/{stuff} betydde att dom var "stable"
+vi har slutat med det, men det kan finnas lite sånt kvar
+ci bygger saker och taggar dom som docker.sunet.se/sunet/{stuff}:latest
+vi taggar om dom som :stable när det är prod dags
+för saker som docker-jenkins-job kör vi så klart på latest tag
