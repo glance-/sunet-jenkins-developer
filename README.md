@@ -23,7 +23,7 @@ Run start.sh.
 * Write a list of admins github usernames as GITHUB_ADMIN_USERNAMES in .env
 * Get the certificates for the docker host to run agents on and point out those files with DOCKER_SERVER_CA_CERTIFICATE DOCKER_CLIENT_CERTIFICATE DOCKER_CLIENT_KEY in .env
 * Configure the DOCKER_URI pointing to the right host in .env
-* Get the certificates for the service and point out that bundle with DEHYDRATED_BUNDLE in .env
+* Get the certificates for the service and point out that bundle with DEHYDRATED_FULLCHAIN and DEHYDRATED_KEY in .env
 * And run it as:
 ```bash
 ./bin/docker-compose -f jenkins_compose/compose.yml -f jenkins_compose/prod.yml

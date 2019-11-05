@@ -14,6 +14,9 @@ services:
       SLACK_TOKEN: ${SLACK_TOKEN?SLACK_TOKEN not set, set it in .env}
       DOCKER_URI: ${DOCKER_URI?DOCKER_URI not set, set it in .env}
     volumes:
+      # Add certificates for jenkins to use
+      - ${DEHYDRATED_FULLCHAIN:?DEHYDRATED_FULLCHAIN not set, set it in .env}:/var/lib/jenkins/cert
+      - ${DEHYDRATED_KEY:?DEHYDRATED_KEY not set, set it in .env}:/var/lib/jenkins/pk
 # Enable named jenkins_home volume if you would like a persistent jenkins_home
 # Othervise, jcasc and job-dsl will populate one.
       - jenkins_home:/var/jenkins_home:rw
@@ -24,10 +27,6 @@ services:
       - DOCKER_SERVER_CA_CERTIFICATE
       - DOCKER_CLIENT_CERTIFICATE
       - DOCKER_CLIENT_KEY
-
-  pound:
-    volumes:
-      - ${DEHYDRATED_BUNDLE:?DEHYDRATED_BUNDLE not set, set it in .env}:/etc/ssl/private/ci.sunet.se.pem
 
   always-https:
     image: docker.sunet.se/always-https

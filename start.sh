@@ -8,7 +8,7 @@ fi
 #
 # Set up entrys in /etc/hosts for the containers with externally accessible services
 #
-(printf '172.16.12.100\tjenkins.dev jenkins.jenkins.docker\n';
+(printf '127.0.0.1\tjenkins.dev jenkins.jenkins.docker\n';
 ) \
     | while read -r line; do
     if ! grep -q "^${line}$" /etc/hosts; then

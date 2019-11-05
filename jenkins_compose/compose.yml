@@ -5,37 +5,12 @@ services:
   jenkins:
     environment:
       CASC_JENKINS_CONFIG: /var/jenkins_home/casc_configs
+      JENKINS_OPTS: --httpPort=-1 --httpsPort=8083 --httpsCertificate=/var/lib/jenkins/cert --httpsPrivateKey=/var/lib/jenkins/pk
     image: docker.sunet.se/sunet/docker-jenkins
-    networks:
-      jenkins_net:
-    expose:
-      - 50000
-      - 8080
+    ports:
+      - 443:8083
     volumes:
       - ../jcasc_configs/jenkins.yaml:/var/jenkins_home/casc_configs/jenkins.yaml:ro
       - ../jcasc_configs/publish_over_ssh.groovy:/var/jenkins_home/init.groovy.d/publish_over_ssh.groovy:ro
       - ../jcasc_configs/locale.groovy:/var/jenkins_home/init.groovy.d/locale.groovy:ro
       - ../jcasc_configs/ignored_warnings.groovy:/var/jenkins_home/init.groovy.d/ignored_warnings.groovy:ro
-
-  pound:
-    image: docker.sunet.se/pound:latest
-    networks:
-      jenkins_net:
-        ipv4_address: 172.16.12.100
-    ports:
-      - 443:443
-    volumes:
-      - ../pound/server.pem:/etc/ssl/private/jenkins.jenkins.docker.pem
-    environment:
-      - "BACKEND_PORT=tcp://jenkins:8080"
-      - "REWRITE_LOCATION=0"
-    depends_on:
-      - jenkins
-
-networks:
-  jenkins_net:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-      - subnet: 172.16.12.0/24
