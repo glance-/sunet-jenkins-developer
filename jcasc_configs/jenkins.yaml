@@ -126,6 +126,16 @@ unclassified:
   globalConfigFiles:
     configs:
       - script:
+          id: ENABLE_GPG_WRAPPER
+          name: enable-gpg-wrapper
+          comment: "Script that generates and enables git to use our gpg-wrapper to use a gpg keyring provisioned by jenkins into variable GNUPG_KEYRING"
+          content: |
+              #!/bin/bash
+              GPG_WRAPPER=$(tempfile gpg_wrapper.XXXXXX)
+              echo -e '#!/bin/bash\nexec gpg --no-options --no-default-keyring --trustdb-name "$(tempfile)" --keyring "$GNUPG_KEYRING" "$@"' > "$GPG_WRAPPER"
+              chmod +x "$GPG_WRAPPER"
+              git config gpg.program "$GPG_WRAPPER"
+      - script:
           id: GPG_WRAPPER
           name: gpg-wrapper
           comment: "Our gpg-wrapper to use a gpg keyring provisioned by jenkins into variable GNUPG_KEYRING"
@@ -204,7 +214,8 @@ jobs:
           }
           steps {
               // Only run code which we can validate
-              shell('chmod +x "$GPG_WRAPPER" && git -c "gpg.program=$GPG_WRAPPER" verify-commit HEAD')
+              managedScript('ENABLE_GPG_WRAPPER')
+              shell('git verify-commit HEAD')
               jobDsl {
                   targets('github_docker_repos.groovy')
                   additionalClasspath('lib/*.jar')
